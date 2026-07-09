@@ -19,21 +19,35 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 5000;
 
-let drawingHistory = [];
+// In-memory state: { roomId: [stroke1, stroke2, ...] }
+const roomHistory = {};
 
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
   
-  socket.emit('initial-history', drawingHistory);
-
-  socket.on('draw', (data) => {
-    drawingHistory.push(data);
-    socket.broadcast.emit('draw', data);
+  socket.on('join-room', (roomId) => {
+    socket.join(roomId);
+    console.log(`User ${socket.id} joined room ${roomId}`);
+    
+    // Initialize room history if it doesn't exist
+    if (!roomHistory[roomId]) {
+      roomHistory[roomId] = [];
+    }
+    
+    // Send existing history to the new client
+    socket.emit('initial-history', roomHistory[roomId]);
   });
 
-  socket.on('clear', () => {
-    drawingHistory = [];
-    io.emit('clear');
+  socket.on('draw', ({ roomId, drawData }) => {
+    if (roomHistory[roomId]) {
+      roomHistory[roomId].push(drawData);
+      socket.to(roomId).emit('draw', drawData);
+    }
+  });
+
+  socket.on('clear', (roomId) => {
+    roomHistory[roomId] = [];
+    io.to(roomId).emit('clear');
   });
 
   socket.on('disconnect', () => {

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { socket } from '../socket';
 
-const Canvas = ({ color, size }) => {
+const Canvas = ({ color, size, roomId }) => {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -18,6 +18,7 @@ const Canvas = ({ color, size }) => {
     contextRef.current = context;
 
     socket.on('initial-history', (history) => {
+      context.clearRect(0, 0, canvas.width, canvas.height);
       history.forEach(drawData => drawLine(drawData, false));
     });
 
@@ -67,12 +68,8 @@ const Canvas = ({ color, size }) => {
     if (!emit) return;
 
     socket.emit('draw', {
-      x0,
-      y0,
-      x1,
-      y1,
-      color,
-      size
+      roomId,
+      drawData: { x0, y0, x1, y1, color, size }
     });
   };
 
